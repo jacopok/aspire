@@ -19,14 +19,14 @@ outdir = Path("outdir") / "basic_example"
 outdir.mkdir(parents=True, exist_ok=True)
 
 # Number of dimensions
-dims = 4
+dims = 5
 
 
 # Define the log likelihood and log prior
 def log_likelihood(samples: Samples):
     # The log likelihood must accept a Samples object
     # The samples object contains the samples in the attribute samples.x
-    return norm(2, 1).logpdf(samples.x).sum(axis=-1)
+    return norm(3, 1).logpdf(samples.x).sum(axis=-1)
 
 
 def log_prior(samples: Samples):
@@ -38,7 +38,7 @@ true_log_evidence = -dims * math.log(20)
 
 # Generate some initial samples
 # These are slightly biased compared to the true posterior
-initial_samples = Samples(norm(2.5, 1.0).rvs(size=(5000, dims)))
+initial_samples = Samples(norm(-3, 1.0).rvs(size=(5000, dims)))
 # Define the parameters and prior bounds
 parameters = [f"x_{i}" for i in range(dims)]
 prior_bounds = {p: [-10, 10] for p in parameters}
@@ -55,14 +55,22 @@ aspire = Aspire(
 # Fit the flow to the initial samples
 history = aspire.fit(
     initial_samples,
-    n_epochs=50,
+    n_epochs=200,
 )
 # Plot the loss
 fig = history.plot_loss()
 fig.savefig(outdir / "loss.png")
 
 # Produce samples from the posterior
-samples = aspire.sample_posterior(5000)
+samples = aspire.sample_posterior(
+    n_samples=5000,
+    sampler="minipcn_smc",
+    adaptive=True,
+    sampler_kwargs=dict(
+        n_steps=100,
+        step_fn="tpcn",
+    )
+)
 
 # Save the the results to a file
 # The AspireFile is a small wrapper around h5py.File that automatically
